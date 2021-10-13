@@ -22,7 +22,18 @@ namespace ComplexModelBinding.Controllers
         // GET: Courses
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Courses.ToListAsync());
+            List<CourseIndexViewModel> courseData = await (from c in _context.Courses
+                             join instructor in _context.Instructors
+                                on c.Teacher.Id equals instructor.Id
+                             orderby c.Title
+                             select new CourseIndexViewModel
+                             {
+                                 CourseID = c.Id,
+                                 CourseTitle = c.Title,
+                                 TeacherName = instructor.FullName
+                             }).ToListAsync();
+
+            return View(courseData);
         }
 
         // GET: Courses/Details/5
@@ -60,7 +71,20 @@ namespace ComplexModelBinding.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(course);
+                Course newCourse = new()
+                {
+                    Description = course.Description,
+                    Title = course.Title,
+                    Teacher = new Instructor()
+                    {
+                        Id = course.ChosenTeacher
+                    }
+                };
+
+                // Tell EF that we have not modified exsisting Instructor
+                _context.Entry(newCourse.Teacher).State = EntityState.Unchanged;
+
+                _context.Add(newCourse);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }

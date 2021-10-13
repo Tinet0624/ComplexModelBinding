@@ -18,8 +18,17 @@ namespace ComplexModelBinding.Models
 
         public string Description { get; set; }
 
-        public List<Instructor> AvailableTeachers { get; set; }
+        public List<Instructor>? AvailableTeachers { get; set; }
 
-        public Instructor ChosenTeacher {  get; set; }
+        public int ChosenTeacher {  get; set; }
+    }
+
+    public class CourseIndexViewModel
+    {
+        public int CourseID { get; set; }
+        [Display(Name = "Course Title")]
+        public string CourseTitle { get; set; }
+        [Display(Name = "Taught by")]
+        public string TeacherName { get; set; }
     }
 }
