@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ComplexModelBinding.Data;
 using ComplexModelBinding.Models;
+using System.Data.Common;
 
 namespace ComplexModelBinding.Controllers
 {
@@ -140,6 +141,15 @@ namespace ComplexModelBinding.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var instructor = await _context.Instructors.FindAsync(id);
+            // change all related courses to a null instructor
+            using DbConnection con = _context.Database.GetDbConnection();
+            await con.OpenAsync();
+            using DbCommand query = con.CreateCommand();
+            query.CommandText = "UPDATE Courses SET TeacherId = null WHERE TeacherId = " + instructor.Id;
+            int rowsAffected = await query.ExecuteNonQueryAsync();
+
+            TempData["Message"] = $"{instructor.FullName} was removed from {rowsAffected} courses.";
+
             _context.Instructors.Remove(instructor);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
