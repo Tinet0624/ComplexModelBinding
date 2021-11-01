@@ -13,17 +13,16 @@ namespace ComplexModelBinding.Controllers
 {
     public class InstructorsController : Controller
     {
-        private readonly ApplicationDbContext _context;
-
-        public InstructorsController(ApplicationDbContext context)
+        private readonly IInstructorRepository _instructorRepo;
+        public InstructorsController(IInstructorRepository instructorRepo)
         {
-            _context = context;
+            _instructorRepo = instructorRepo;
         }
 
         // GET: Instructors
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
-            return View(await _context.Instructors.ToListAsync());
+            return View(_instructorRepo.GetAllInstructors());
         }
 
         // GET: Instructors/Details/5
@@ -34,7 +33,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _context.Instructors
+            var instructor = await _instructorRepo.Instructors
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (instructor == null)
             {
@@ -59,8 +58,8 @@ namespace ComplexModelBinding.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(instructor);
-                await _context.SaveChangesAsync();
+                _instructorRepo.Add(instructor);
+                await _instructorRepo.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(instructor);
@@ -74,7 +73,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _context.Instructors.FindAsync(id);
+            var instructor = await _instructorRepo.Instructors.FindAsync(id);
             if (instructor == null)
             {
                 return NotFound();
@@ -98,8 +97,8 @@ namespace ComplexModelBinding.Controllers
             {
                 try
                 {
-                    _context.Update(instructor);
-                    await _context.SaveChangesAsync();
+                    _instructorRepo.Update(instructor);
+                    await _instructorRepo.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,7 +124,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _context.Instructors
+            var instructor = await _instructorRepo.Instructors
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (instructor == null)
             {
@@ -140,9 +139,12 @@ namespace ComplexModelBinding.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var instructor = await _context.Instructors.FindAsync(id);
+            var instructor = await _instructorRepo.Instructors.FindAsync(id);
+
+
+
             // change all related courses to a null instructor
-            using DbConnection con = _context.Database.GetDbConnection();
+            using DbConnection con = _instructorRepo.Database.GetDbConnection();
             await con.OpenAsync();
             using DbCommand query = con.CreateCommand();
             query.CommandText = "UPDATE Courses SET TeacherId = null WHERE TeacherId = " + instructor.Id;
@@ -150,14 +152,14 @@ namespace ComplexModelBinding.Controllers
 
             TempData["Message"] = $"{instructor.FullName} was removed from {rowsAffected} courses.";
 
-            _context.Instructors.Remove(instructor);
-            await _context.SaveChangesAsync();
+            _instructorRepo.Instructors.Remove(instructor);
+            await _instructorRepo.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool InstructorExists(int id)
         {
-            return _context.Instructors.Any(e => e.Id == id);
+            return _instructorRepo.Instructors.Any(e => e.Id == id);
         }
     }
 }
