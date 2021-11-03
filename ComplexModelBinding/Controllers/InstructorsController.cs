@@ -20,9 +20,9 @@ namespace ComplexModelBinding.Controllers
         }
 
         // GET: Instructors
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View(_instructorRepo.GetAllInstructors());
+            return View(await _instructorRepo.GetAllInstructors());
         }
 
         // GET: Instructors/Details/5
@@ -33,8 +33,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _instructorRepo.Instructors
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var instructor = await _instructorRepo.GetInstructor(id.Value);
             if (instructor == null)
             {
                 return NotFound();
@@ -58,8 +57,7 @@ namespace ComplexModelBinding.Controllers
         {
             if (ModelState.IsValid)
             {
-                _instructorRepo.Add(instructor);
-                await _instructorRepo.SaveChangesAsync();
+                await _instructorRepo.SaveInstructor(instructor);
                 return RedirectToAction(nameof(Index));
             }
             return View(instructor);
@@ -73,7 +71,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _instructorRepo.Instructors.FindAsync(id);
+            var instructor = await _instructorRepo.GetInstructor(id.Value);
             if (instructor == null)
             {
                 return NotFound();
@@ -97,12 +95,11 @@ namespace ComplexModelBinding.Controllers
             {
                 try
                 {
-                    _instructorRepo.Update(instructor);
-                    await _instructorRepo.SaveChangesAsync();
+                    await _instructorRepo.UpdateInstructor(instructor);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!InstructorExists(instructor.Id))
+                    if (!await InstructorExists(instructor.Id))
                     {
                         return NotFound();
                     }
@@ -124,8 +121,7 @@ namespace ComplexModelBinding.Controllers
                 return NotFound();
             }
 
-            var instructor = await _instructorRepo.Instructors
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var instructor = await _instructorRepo.GetInstructor(id.Value);
             if (instructor == null)
             {
                 return NotFound();
@@ -139,27 +135,17 @@ namespace ComplexModelBinding.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var instructor = await _instructorRepo.Instructors.FindAsync(id);
+            var instructor = await _instructorRepo.GetInstructor(id);
+            TempData["Message"] = $"{instructor.FullName} was removed from any related courses.";
 
-
-
-            // change all related courses to a null instructor
-            using DbConnection con = _instructorRepo.Database.GetDbConnection();
-            await con.OpenAsync();
-            using DbCommand query = con.CreateCommand();
-            query.CommandText = "UPDATE Courses SET TeacherId = null WHERE TeacherId = " + instructor.Id;
-            int rowsAffected = await query.ExecuteNonQueryAsync();
-
-            TempData["Message"] = $"{instructor.FullName} was removed from {rowsAffected} courses.";
-
-            _instructorRepo.Instructors.Remove(instructor);
-            await _instructorRepo.SaveChangesAsync();
+            // remove instructor
+            await _instructorRepo.DeleteInstructor(instructor.Id);
             return RedirectToAction(nameof(Index));
         }
 
-        private bool InstructorExists(int id)
+        private async Task<bool> InstructorExists(int id)
         {
-            return _instructorRepo.Instructors.Any(e => e.Id == id);
+            return await _instructorRepo.GetInstructor(id) != null;
         }
     }
 }

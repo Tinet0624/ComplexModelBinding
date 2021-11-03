@@ -1,5 +1,6 @@
 ﻿using ComplexModelBinding.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 
 namespace ComplexModelBinding.Models
 {
@@ -24,8 +25,17 @@ namespace ComplexModelBinding.Models
         public async Task DeleteInstructor(int instructorId)
         {
             Instructor? instructor = await GetInstructor(instructorId);
+
             if (instructor != null)
             {
+                // change all related courses to a null instructor
+                using DbConnection con = _context.Database.GetDbConnection();
+                await con.OpenAsync();
+                using DbCommand query = con.CreateCommand();
+                query.CommandText = "UPDATE Courses SET TeacherId = null WHERE TeacherId = " + instructor.Id;
+                int rowsAffected = await query.ExecuteNonQueryAsync();
+
+                //remove instructor form db
                 _context.Instructors.Remove(instructor);
                 await _context.SaveChangesAsync();
             }
@@ -52,5 +62,7 @@ namespace ComplexModelBinding.Models
             _context.Add(instructor);
             await _context.SaveChangesAsync();
         }
+
+
     }
 }
